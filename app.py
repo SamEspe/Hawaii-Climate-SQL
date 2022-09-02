@@ -1,6 +1,9 @@
 # Import dependencies
+from audioop import avg
 from calendar import day_abbr
 import json
+from re import M
+from tkinter import E
 import numpy as np
 import datetime as dt
 
@@ -37,7 +40,9 @@ def homepage():
     /api/v1.0/precipitation <br/> \
     /api/v1.0/stations <br/> \
     /api/v1.0/tobs <br/> \
-    /api/v1.0/search")
+    <br/> You can also search the records using dates. <br/> \
+    - To search from a start date until the last available date, add the date to the URL after /v1.0/ in the form: YYYY-MM-DD <br/> \
+    - To search from a start date until an end date, add the start date and end date divided by a slash to the URL after /v1.0/ in the form: YYYY-MM-DD/YYYY-MM-DD")
 
 # Precipitation
 @app.route('/api/v1.0/precipitation')
@@ -115,10 +120,66 @@ def tobs():
     return jsonify(temp_data)
 
 # Temperature - all dates after "start"
-# @app.route('/api/v1.0/<start>')
+@app.route('/api/v1.0/<start>')
+def temps_start(start):
+    # Save start date
+    start_date = start
+
+    # Open session
+    session = Session(engine)
+
+    # Query the database
+    min_start_only = session.query(func.min(Measurement.tobs)).filter(Measurement.station == "USC00519281").filter(Measurement.date >= start_date).all()[0][0]
+    max_start_only = session.query(func.max(Measurement.tobs)).filter(Measurement.station == "USC00519281").filter(Measurement.date >= start_date).all()[0][0]
+    avg_start_only = session.query(func.avg(Measurement.tobs)).filter(Measurement.station == "USC00519281").filter(Measurement.date >= start_date).all()[0][0]
+
+    # Close session
+    session.close()
+
+    # Round average to 2 decimal points
+    avg_rounded = round(avg_start_only, 2)
+
+    # Create output dictionary
+    output_dict = {}
+    output_dict["TMIN"] = min_start_only
+    output_dict["TMAX"] = max_start_only
+    output_dict["TAVG"] = avg_rounded
+
+    # Return query results
+        
+    return jsonify(output_dict)
 
 # Temperature - date range
-# @app.route('/api/v1.0/<start>/<end>')
+@app.route('/api/v1.0/<start>/<end>')
+def temps_start_end(start,end):
+    # Save start and end dates
+    start_date = start
+    end_date = end
+
+    # Open session
+    session = Session(engine)
+
+    # Query the database
+    min_start_end = session.query(func.min(Measurement.tobs)).filter(Measurement.station == "USC00519281").filter(Measurement.date >= start_date).filter(Measurement.date <= end_date).all()[0][0]
+    max_start_end = session.query(func.max(Measurement.tobs)).filter(Measurement.station == "USC00519281").filter(Measurement.date >= start_date).filter(Measurement.date <= end_date).all()[0][0]
+    avg_start_end = session.query(func.avg(Measurement.tobs)).filter(Measurement.station == "USC00519281").filter(Measurement.date >= start_date).filter(Measurement.date <= end_date).all()[0][0]
+    
+    # Close session
+    session.close()
+    # Round average to 2 decimal points
+
+    avg_start_end_rounded = round(avg_start_end, 2)
+
+    # Create output dictionary
+    output_dict = {}
+    output_dict["TMIN"] = min_start_end
+    output_dict["TMAX"] = max_start_end
+    output_dict["TAVG"] = avg_start_end_rounded
+
+    # Return query results
+    
+    return jsonify(output_dict)
+
 
 # Run Flask server
 if __name__ == '__main__':
