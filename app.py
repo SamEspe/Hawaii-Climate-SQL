@@ -1,4 +1,5 @@
 # Import dependencies
+from calendar import day_abbr
 import json
 import numpy as np
 import datetime as dt
@@ -34,7 +35,9 @@ def homepage():
     return("Welcome to Sam's Climate App. <br/> \
     Here are the available routes: <br/> <br/>\
     /api/v1.0/precipitation <br/> \
-    /api/v1.0/stations")
+    /api/v1.0/stations <br/> \
+    /api/v1.0/tobs <br/> \
+    /api/v1.0/search")
 
 # Precipitation
 @app.route('/api/v1.0/precipitation')
@@ -83,9 +86,33 @@ def stations():
         stations.append(station_dict)
     
     return jsonify(stations)
-    
+
 # Temperature Observations
-# @app.route('/api/v1.0/tobs')
+@app.route('/api/v1.0/tobs')
+def tobs():
+    # Open session
+    session = Session(engine)
+
+    # Query for tobs data (like in JN)
+    last_date2 = session.query(func.max(Measurement.date)).filter(Measurement.station == "USC00519281").first()[0]
+    last_date2_dt = dt.datetime.strptime(last_date2, '%Y-%m-%d')
+    year_ago2 = last_date2_dt - dt.timedelta(days = 365)
+
+    temp_data_year = session.query(Measurement.date, Measurement.tobs).filter(Measurement.station == "USC00519281").filter(Measurement.date >= year_ago2).filter(Measurement.date <= last_date2).all()
+    # Close session
+    session.close()
+
+    # Make dictionary
+    temp_data = []
+
+    for date, tobs in temp_data_year:
+        date_tobs = {}
+        date_tobs["date"] = date
+        date_tobs["tobs"] = tobs
+        temp_data.append(date_tobs)
+
+    # Return JSONified version
+    return jsonify(temp_data)
 
 # Temperature - all dates after "start"
 # @app.route('/api/v1.0/<start>')
