@@ -1,4 +1,4 @@
-# sqlalchemy-challenge
+# Hawaii Climate Analysis & Application
 
 ## Contributor: Sam Espe
 
